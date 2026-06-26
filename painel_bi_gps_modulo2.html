@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portal GPS · Gestão de Contratos</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:#0d1117; --surface:#161b22; --surface2:#1c2333; --border:#30363d;
+  --blue:#58a6ff; --blue-dim:#1f3a5f;
+  --green:#3fb950; --green-dim:#1a3526;
+  --amber:#d29922; --amber-dim:#3d2b00;
+  --red:#f85149; --red-dim:#3d1515;
+  --purple:#bc8cff; --purple-dim:#2d1f4f;
+  --text:#e6edf3; --muted:#8b949e; --dim:#484f58;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+
+/* HEADER */
+.portal-header{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;justify-content:space-between}
+.logo-area{display:flex;align-items:center;gap:12px}
+.logo-badge{background:var(--blue);color:#fff;font-weight:800;font-size:18px;padding:6px 12px;border-radius:6px;letter-spacing:1px}
+.portal-name{font-size:15px;font-weight:600}
+.portal-sub{font-size:11px;color:var(--muted)}
+.sim-tag{background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber);padding:3px 12px;border-radius:20px;font-size:11px;font-weight:700}
+
+/* CONTRACT BAR */
+.contract-bar{background:var(--surface2);border-bottom:1px solid var(--border);padding:8px 24px;display:flex;align-items:center;gap:24px;flex-wrap:wrap}
+.cf{display:flex;flex-direction:column}
+.cl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.cv{font-size:13px;font-weight:600}
+.cdiv{width:1px;height:30px;background:var(--border)}
+
+/* KPI ROW */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border-bottom:1px solid var(--border)}
+.kpi{background:var(--surface);padding:16px 24px}
+.kpi-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.kpi-val{font-size:26px;font-weight:800;line-height:1;margin-bottom:4px}
+.kpi-val.blue{color:var(--blue)} .kpi-val.green{color:var(--green)} .kpi-val.amber{color:var(--amber)} .kpi-val.red{color:var(--red)}
+.kpi-sub{font-size:11px;color:var(--muted)}
+.kpi-sub.down{color:var(--red);font-weight:600} .kpi-sub.up{color:var(--green);font-weight:600}
+
+/* TABS */
+.tabs-nav{display:flex;background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;overflow-x:auto}
+.tab-btn{display:flex;align-items:center;gap:8px;padding:14px 18px;border:none;background:none;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;font-size:13px;font-weight:500;white-space:nowrap;transition:color .15s}
+.tab-btn:hover{color:var(--text)}
+.tab-btn.active{color:var(--blue);border-bottom-color:var(--blue)}
+.tab-num{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+.tab-btn.active .tab-num{background:var(--blue);color:#fff}
+.tab-btn:not(.active) .tab-num{background:var(--surface2);color:var(--muted)}
+.tab-hint{color:var(--dim);font-size:11px}
+
+/* PANELS */
+.tab-panel{display:none;padding:24px}
+.tab-panel.active{display:block}
+.panel-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;gap:16px}
+.panel-title{font-size:20px;font-weight:700}
+.panel-sub{font-size:13px;color:var(--muted);margin-top:4px}
+
+/* CYNEFIN BADGE */
+.cy-badge{display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:8px;border:1px solid;font-size:12px;font-weight:600;white-space:nowrap}
+.cy-badge.complicado{background:var(--blue-dim);border-color:var(--blue);color:var(--blue)}
+.cy-badge.complexo{background:var(--purple-dim);border-color:var(--purple);color:var(--purple)}
+.cy-badge.caotico{background:var(--red-dim);border-color:var(--red);color:var(--red)}
+
+/* CHART CARDS */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.grid-1{margin-bottom:16px}
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px}
+.chart-title{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px}
+
+/* ALERT */
+.alert{background:var(--amber-dim);border:1px solid var(--amber);border-radius:8px;padding:14px 18px;margin-bottom:16px}
+.alert-title{font-size:13px;font-weight:700;color:var(--amber);margin-bottom:6px}
+.alert-body{font-size:13px;color:var(--text);line-height:1.6}
+
+/* SCENARIOS */
+.scenarios{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+.sc{border-radius:8px;padding:16px;border:1px solid}
+.sc.alerta{background:var(--red-dim);border-color:var(--red)}
+.sc.base{background:var(--amber-dim);border-color:var(--amber)}
+.sc.rec{background:var(--green-dim);border-color:var(--green)}
+.sc-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+.sc.alerta .sc-label{color:var(--red)} .sc.base .sc-label{color:var(--amber)} .sc.rec .sc-label{color:var(--green)}
+.sc-val{font-size:22px;font-weight:800}
+.sc-desc{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.4}
+
+/* ACTION TABLE */
+.action-table{width:100%;border-collapse:collapse;font-size:13px}
+.action-table th{background:var(--surface2);color:var(--muted);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;padding:10px 14px;text-align:left;border-bottom:1px solid var(--border)}
+.action-table td{padding:10px 14px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle}
+.action-table tr:last-child td{border-bottom:none}
+.action-table tr:hover td{background:var(--surface2)}
+.lbar{display:flex;align-items:center;gap:8px}
+.lbar-fill{height:8px;border-radius:4px}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600}
+.badge.a{background:var(--red-dim);color:var(--red)}
+.badge.m{background:var(--amber-dim);color:var(--amber)}
+.badge.b{background:var(--surface2);color:var(--muted)}
+
+/* MISSION CARD */
+.mission{background:var(--surface2);border:1px solid var(--border);border-left:3px solid var(--blue);border-radius:8px;padding:20px 24px}
+.mission.d2{border-left-color:var(--amber)}
+.mission.d3{border-left-color:var(--purple)}
+.mission.d4{border-left-color:var(--red)}
+.mission-hdr{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--blue);margin-bottom:10px}
+.mission.d2 .mission-hdr{color:var(--amber)} .mission.d3 .mission-hdr{color:var(--purple)} .mission.d4 .mission-hdr{color:var(--red)}
+.mission-q{font-size:16px;font-weight:700;margin-bottom:12px}
+.prompts{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px}
+.prompt{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px 14px;font-size:13px;color:var(--muted)}
+.prompt strong{display:block;color:var(--text);font-size:12px;margin-bottom:2px}
+
+@media(max-width:900px){
+  .kpi-row{grid-template-columns:repeat(2,1fr)}
+  .grid-2{grid-template-columns:1fr}
+  .scenarios{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="portal-header">
+  <div class="logo-area">
+    <div class="logo-badge">GPS</div>
+    <div>
+      <div class="portal-name">Portal de Gestão · Contratos</div>
+      <div class="portal-sub">Academia de Líderes Operacionais 2026 · Módulo 2</div>
+    </div>
+  </div>
+  <span class="sim-tag">⚠ DADOS SIMULADOS — MISSÃO ANALÍTICA</span>
+</header>
+
+<!-- CONTRACT BAR -->
+<div class="contract-bar">
+  <div class="cf"><span class="cl">Contrato</span><span class="cv">Segurança Patrimonial · Cliente Alfa</span></div>
+  <div class="cdiv"></div>
+  <div class="cf"><span class="cl">Coordenador</span><span class="cv">[Seu Nome]</span></div>
+  <div class="cdiv"></div>
+  <div class="cf"><span class="cl">Período</span><span class="cv">Jan – Mai / 2026</span></div>
+  <div class="cdiv"></div>
+  <div class="cf"><span class="cl">Regional</span><span class="cv">PE</span></div>
+  <div class="cdiv"></div>
+  <div class="cf"><span class="cl">Status</span><span class="cv" style="color:var(--amber)">⚠ Atenção</span></div>
+</div>
+
+<!-- KPI ROW -->
+<div class="kpi-row">
+  <div class="kpi">
+    <div class="kpi-label">Faturamento Acumulado</div>
+    <div class="kpi-val blue">R$ 20,6M</div>
+    <div class="kpi-sub">Jan–Mai 2026 · 5 meses</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">Resultado Líquido</div>
+    <div class="kpi-val green">R$ 2,71M</div>
+    <div class="kpi-sub down">↘ Mai: R$323K vs Jan: R$759K (–57%)</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">Margem Média</div>
+    <div class="kpi-val amber">13,1%</div>
+    <div class="kpi-sub down">↘ Fev: 19,2% → Mai: 8,4%</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">% Custo Pessoal / Receita</div>
+    <div class="kpi-val red">66,4%</div>
+    <div class="kpi-sub down">↗ Pico em Mar: 72,6%</div>
+  </div>
+</div>
+
+<!-- TABS -->
+<nav class="tabs-nav">
+  <button class="tab-btn active" onclick="showTab('descritiva',this)">
+    <span class="tab-num">1</span> Análise Descritiva <span class="tab-hint">— O que está acontecendo?</span>
+  </button>
+  <button class="tab-btn" onclick="showTab('diagnostica',this)">
+    <span class="tab-num">2</span> Análise Diagnóstica <span class="tab-hint">— Por que está acontecendo?</span>
+  </button>
+  <button class="tab-btn" onclick="showTab('preditiva',this)">
+    <span class="tab-num">3</span> Análise Preditiva <span class="tab-hint">— O que vai acontecer?</span>
+  </button>
+  <button class="tab-btn" onclick="showTab('prescritiva',this)">
+    <span class="tab-num">4</span> Análise Prescritiva <span class="tab-hint">— O que devo fazer?</span>
+  </button>
+</nav>
+
+<!-- TAB 1: DESCRITIVA -->
+<section id="tab-descritiva" class="tab-panel active">
+  <div class="panel-header">
+    <div>
+      <div class="panel-title">Análise Descritiva</div>
+      <div class="panel-sub">Leia os dados. Descreva o que está acontecendo neste contrato — sem julgamentos, sem hipóteses ainda.</div>
+    </div>
+    <div class="cy-badge complicado">● Cynefin: Óbvio → Complicado</div>
+  </div>
+
+  <div class="grid-2">
+    <div class="chart-card">
+      <div class="chart-title">Faturamento Bruto vs. Resultado Líquido (R$)</div>
+      <div style="position:relative;height:260px"><canvas id="c1a"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Evolução da Margem Líquida (%)</div>
+      <div style="position:relative;height:260px"><canvas id="c1b"></canvas></div>
+    </div>
+  </div>
+
+  <div class="grid-1 chart-card">
+    <div class="chart-title">DRE Simplificada — Composição do Resultado por Mês (R$)</div>
+    <div style="position:relative;height:220px"><canvas id="c1c"></canvas></div>
+  </div>
+
+  <div class="mission">
+    <div class="mission-hdr">📊 Missão Analítica · Passo 1 — Descritiva</div>
+    <div class="mission-q">O que este contrato está mostrando?</div>
+    <div class="prompts">
+      <div class="prompt"><strong>Faturamento</strong>Qual o mês de maior e menor receita? Qual a variação em R$?</div>
+      <div class="prompt"><strong>Resultado</strong>O resultado está crescendo, caindo ou estável? Descreva a tendência.</div>
+      <div class="prompt"><strong>Margem</strong>Em quais meses a margem ficou abaixo de 10%? Qual o número exato?</div>
+      <div class="prompt"><strong>DRE</strong>Qual é o maior grupo de custo? Qual percentual representa sobre a receita?</div>
+    </div>
+  </div>
+</section>
+
+<!-- TAB 2: DIAGNÓSTICA -->
+<section id="tab-diagnostica" class="tab-panel">
+  <div class="panel-header">
+    <div>
+      <div class="panel-title">Análise Diagnóstica</div>
+      <div class="panel-sub">Vá além do número. Identifique as anomalias e levante hipóteses de causa.</div>
+    </div>
+    <div class="cy-badge complicado">● Cynefin: Complicado</div>
+  </div>
+
+  <div class="alert">
+    <div class="alert-title">⚠ Anomalia Detectada — Março / 2026</div>
+    <div class="alert-body">
+      Benefícios saltaram de R$ 338K (Jan) para <strong>R$ 502K em Março (+48%)</strong>, coincidindo com queda de receita de R$ 4,49M → R$ 4,09M.
+      A margem despencou de 19,2% (Fev) para 8,5% (Mar). <strong>O que causou isso?</strong>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="chart-card">
+      <div class="chart-title">Composição de Custos — Acumulado Jan–Mai (R$)</div>
+      <div style="position:relative;height:260px"><canvas id="c2a"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Evolução dos Principais Grupos de Custo (R$)</div>
+      <div style="position:relative;height:260px"><canvas id="c2b"></canvas></div>
+    </div>
+  </div>
+
+  <div class="grid-1 chart-card">
+    <div class="chart-title">Desvio Mensal vs. Média — Benefícios e Despesas Gerais (R$)</div>
+    <div style="position:relative;height:200px"><canvas id="c2c"></canvas></div>
+  </div>
+
+  <div class="mission d2">
+    <div class="mission-hdr">🔍 Missão Analítica · Passo 2 — Diagnóstica</div>
+    <div class="mission-q">Por que o resultado caiu? Qual é a sua hipótese de causa?</div>
+    <div class="prompts">
+      <div class="prompt"><strong>Anomalia</strong>Qual linha de custo mais variou em Março? Qual o impacto em R$ vs. a média?</div>
+      <div class="prompt"><strong>Hipótese</strong>O que poderia causar um salto de R$ 163K em Benefícios em um único mês?</div>
+      <div class="prompt"><strong>Combinação</strong>A queda de receita E o aumento de custos são relacionados? Como?</div>
+      <div class="prompt"><strong>Cynefin</strong>Este problema é Complicado ou Complexo? Por quê isso importa para a ação?</div>
+    </div>
+  </div>
+</section>
+
+<!-- TAB 3: PREDITIVA -->
+<section id="tab-preditiva" class="tab-panel">
+  <div class="panel-header">
+    <div>
+      <div class="panel-title">Análise Preditiva</div>
+      <div class="panel-sub">Projete o futuro. Se a tendência atual continuar, o que acontecerá com este contrato?</div>
+    </div>
+    <div class="cy-badge complexo">● Cynefin: Complexo</div>
+  </div>
+
+  <div class="scenarios">
+    <div class="sc alerta">
+      <div class="sc-label">🔴 Cenário Alerta</div>
+      <div class="sc-val">–R$ 87K</div>
+      <div class="sc-desc">Resultado projetado para Ago/26 sem intervenção. Tendência atual: contrato entra no vermelho em Ago.</div>
+    </div>
+    <div class="sc base">
+      <div class="sc-label">🟡 Cenário Base</div>
+      <div class="sc-val">R$ 210K</div>
+      <div class="sc-desc">Estabilização do faturamento + redução parcial dos custos anômalos. Margem projetada: ~5,5%.</div>
+    </div>
+    <div class="sc rec">
+      <div class="sc-label">🟢 Cenário Recuperação</div>
+      <div class="sc-val">R$ 540K</div>
+      <div class="sc-desc">Normalização dos benefícios + recuperação de 10% de faturamento. Margem de volta a ~14%. Exige ação imediata.</div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="chart-card">
+      <div class="chart-title">Projeção do Resultado — Jun a Ago/2026 (3 Cenários)</div>
+      <div style="position:relative;height:260px"><canvas id="c3a"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Projeção da Margem Líquida (%)</div>
+      <div style="position:relative;height:260px"><canvas id="c3b"></canvas></div>
+    </div>
+  </div>
+
+  <div class="mission d3">
+    <div class="mission-hdr">🔮 Missão Analítica · Passo 3 — Preditiva</div>
+    <div class="mission-q">O que vai acontecer se nada mudar? E se agirmos?</div>
+    <div class="prompts">
+      <div class="prompt"><strong>Tendência</strong>Em qual mês o resultado ficaria negativo no Cenário Alerta?</div>
+      <div class="prompt"><strong>Urgência</strong>Qual é o prazo máximo para intervir antes de o contrato virar problema?</div>
+      <div class="prompt"><strong>Cenário</strong>Qual cenário é mais realista para este contrato? Justifique com dados.</div>
+      <div class="prompt"><strong>Comunicação</strong>O que você informaria ao seu gestor sobre este contrato hoje?</div>
+    </div>
+  </div>
+</section>
+
+<!-- TAB 4: PRESCRITIVA -->
+<section id="tab-prescritiva" class="tab-panel">
+  <div class="panel-header">
+    <div>
+      <div class="panel-title">Análise Prescritiva</div>
+      <div class="panel-sub">Da análise à ação. Defina as alavancas prioritárias e construa o plano de resposta.</div>
+    </div>
+    <div class="cy-badge caotico">● Cynefin: Complicado → Ação</div>
+  </div>
+
+  <div class="grid-1 chart-card">
+    <div class="chart-title">Ranking de Alavancas — Impacto Estimado na Margem se Normalizado (R$/mês)</div>
+    <div style="position:relative;height:180px"><canvas id="c4a"></canvas></div>
+  </div>
+
+  <div class="grid-1 chart-card" style="margin-bottom:16px">
+    <div class="chart-title">Plano de Ação — Contrato Segurança Patrimonial · Cliente Alfa</div>
+    <table class="action-table">
+      <thead>
+        <tr><th>Alavanca</th><th>Ação Prescrita</th><th>Impacto Estimado</th><th>Prazo</th><th>Prioridade</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Benefícios</strong><br><small style="color:var(--muted)">+R$163K em Mar vs. média</small></td>
+          <td>Auditar afastamentos, horas extras e benefícios variáveis de Mar/Abr. Identificar se é recorrente.</td>
+          <td><div class="lbar"><div class="lbar-fill" style="width:160px;background:var(--red)"></div><span style="font-size:12px;font-weight:600">+R$ 150K/mês</span></div></td>
+          <td>7 dias</td>
+          <td><span class="badge a">ALTA</span></td>
+        </tr>
+        <tr>
+          <td><strong>Faturamento</strong><br><small style="color:var(--muted)">–R$640K vs. Fev (pico)</small></td>
+          <td>Verificar inadimplência, reajuste contratual pendente e postos não faturados. Acionar comercial.</td>
+          <td><div class="lbar"><div class="lbar-fill" style="width:85px;background:var(--amber)"></div><span style="font-size:12px;font-weight:600">+R$ 80K/mês</span></div></td>
+          <td>15 dias</td>
+          <td><span class="badge a">ALTA</span></td>
+        </tr>
+        <tr>
+          <td><strong>Despesas Gerais</strong><br><small style="color:var(--muted)">R$169K Mai vs. R$89K Fev</small></td>
+          <td>Revisar aprovações de despesas eventuais de Mai. Identificar gastos não orçados e bloquear recorrência.</td>
+          <td><div class="lbar"><div class="lbar-fill" style="width:60px;background:var(--amber)"></div><span style="font-size:12px;font-weight:600">+R$ 60K/mês</span></div></td>
+          <td>30 dias</td>
+          <td><span class="badge m">MÉDIA</span></td>
+        </tr>
+        <tr>
+          <td><strong>Transportes</strong><br><small style="color:var(--muted)">Crescimento constante Jan→Mai</small></td>
+          <td>Mapear rotas e justificativas. Avaliar renegociação ou otimização de escalas operacionais.</td>
+          <td><div class="lbar"><div class="lbar-fill" style="width:20px;background:var(--muted)"></div><span style="font-size:12px;font-weight:600">+R$ 15K/mês</span></div></td>
+          <td>45 dias</td>
+          <td><span class="badge b">BAIXA</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="mission d4">
+    <div class="mission-hdr">⚡ Missão Analítica · Passo 4 — Prescritiva</div>
+    <div class="mission-q">Construa a Narrativa Analítica do grupo.</div>
+    <div class="prompts">
+      <div class="prompt"><strong>Descritiva (o que vimos)</strong>"Ao analisar os dados, identificamos que..."</div>
+      <div class="prompt"><strong>Diagnóstica (nossa hipótese)</strong>"A principal causa identificada foi..."</div>
+      <div class="prompt"><strong>Preditiva (o risco)</strong>"Se não agirmos, em [prazo] o resultado será..."</div>
+      <div class="prompt"><strong>Prescritiva (o plano)</strong>"Nossa recomendação é [ação], com impacto estimado de [R$] em [prazo]."</div>
+    </div>
+  </div>
+</section>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────
+const M5 = ['Jan/26','Fev/26','Mar/26','Abr/26','Mai/26'];
+const M8 = ['Jan/26','Fev/26','Mar/26','Abr/26','Mai/26','Jun/26*','Jul/26*','Ago/26*'];
+
+const recBruta   = [4390273,4491727,4094117,3798433,3852959];
+const impostos   = [517654,534641,446783,433463,440470];
+const recLiq     = recBruta.map((r,i)=>r-impostos[i]);
+const resultado  = [758917,862588,348629,419729,323162];
+const margem     = resultado.map((r,i)=>+((r/recBruta[i])*100).toFixed(1));
+
+const pessoal    = [1284550,1250730,1307877,1201721,1224961];
+const encargos   = [462529,439357,495313,413414,439094];
+const provisoes  = [334154,327021,341953,314314,322951];
+const beneficios = [338527,377626,501527,351155,349664];
+const transportes= [192996,196905,191182,203815,205598];
+const materiais  = [124431,150043,156271,144764,142080];
+const despGerais = [111034,89113,107171,82282,169176];
+const custoPes   = pessoal.map((p,i)=>p+encargos[i]+provisoes[i]+beneficios[i]);
+const outros     = recLiq.map((r,i)=>r-resultado[i]-custoPes[i]-transportes[i]-materiais[i]-despGerais[i]);
+
+// Projections
+const resAlerta = [...resultado,200000,120000,-87000];
+const resBase   = [...resultado,280000,245000,210000];
+const resRec    = [...resultado,420000,480000,540000];
+const mrgAlerta = [...margem,5.2,3.1,-2.3];
+const mrgBase   = [...margem,7.3,6.5,5.5];
+const mrgRec    = [...margem,10.9,12.5,14.0];
+
+// Lever data
+const alavancas = ['Normalizar Benefícios','Recuperar Faturamento','Reduzir Desp. Gerais','Otimizar Transportes'];
+const impactos  = [150000,80000,60000,15000];
+
+// ── DEFAULTS ─────────────────────────────────────────────────────
+Chart.defaults.color = '#8b949e';
+Chart.defaults.borderColor = '#30363d';
+Chart.defaults.font.family = "-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif";
+Chart.defaults.font.size = 12;
+
+function fmtBRL(v) {
+  const abs = Math.abs(v);
+  const sign = v < 0 ? '–' : '';
+  if (abs >= 1e6) return sign+'R$ '+(abs/1e6).toFixed(1)+'M';
+  if (abs >= 1e3) return sign+'R$ '+Math.round(abs/1e3)+'K';
+  return sign+'R$ '+Math.round(abs);
+}
+
+const gridColor = '#21262d';
+
+// ── TAB 1: DESCRITIVA ────────────────────────────────────────────
+new Chart(document.getElementById('c1a'),{
+  type:'bar',
+  data:{
+    labels:M5,
+    datasets:[
+      {label:'Faturamento Bruto',data:recBruta,backgroundColor:'rgba(88,166,255,0.2)',borderColor:'#58a6ff',borderWidth:1.5,borderRadius:4},
+      {label:'Resultado Líquido',data:resultado,backgroundColor:'rgba(63,185,80,0.8)',borderColor:'#3fb950',borderWidth:1.5,borderRadius:4}
+    ]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'top'},tooltip:{callbacks:{label:c=>' '+c.dataset.label+': '+fmtBRL(c.raw)}}},
+    scales:{
+      y:{grid:{color:gridColor},ticks:{callback:v=>fmtBRL(v)}},
+      x:{grid:{display:false}}
+    }
+  }
+});
+
+new Chart(document.getElementById('c1b'),{
+  type:'line',
+  data:{
+    labels:M5,
+    datasets:[{
+      label:'Margem Líquida %',data:margem,
+      borderColor:'#f85149',backgroundColor:'rgba(248,81,73,0.1)',
+      borderWidth:2.5,pointRadius:5,fill:true,tension:0.3,
+      pointBackgroundColor:margem.map(m=>m<10?'#f85149':m<15?'#d29922':'#3fb950')
+    }]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'top'},tooltip:{callbacks:{label:c=>' Margem: '+c.raw+'%'}}},
+    scales:{
+      y:{grid:{color:gridColor},ticks:{callback:v=>v+'%'},min:0},
+      x:{grid:{display:false}}
+    }
+  }
+});
+
+new Chart(document.getElementById('c1c'),{
+  type:'bar',
+  data:{
+    labels:M5,
+    datasets:[
+      {label:'Custo Pessoal',  data:custoPes,   backgroundColor:'#1f3a5f',borderRadius:0},
+      {label:'Transportes',    data:transportes,backgroundColor:'#2d1f4f',borderRadius:0},
+      {label:'Materiais',      data:materiais,  backgroundColor:'#3d2b00',borderRadius:0},
+      {label:'Desp. Gerais',   data:despGerais, backgroundColor:'#3d1515',borderRadius:0},
+      {label:'Outros',         data:outros.map(v=>Math.max(v,0)),backgroundColor:'#21262d',borderRadius:0},
+      {label:'Resultado',      data:resultado,  backgroundColor:'#1a3526',borderColor:'#3fb950',borderWidth:1,borderRadius:0}
+    ]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'right',labels:{font:{size:11}}},tooltip:{callbacks:{label:c=>' '+c.dataset.label+': '+fmtBRL(c.raw)}}},
+    scales:{
+      y:{stacked:true,grid:{color:gridColor},ticks:{callback:v=>fmtBRL(v)}},
+      x:{stacked:true,grid:{display:false}}
+    }
+  }
+});
+
+// ── TAB 2: DIAGNÓSTICA ───────────────────────────────────────────
+const totBeneficios = beneficios.reduce((a,b)=>a+b,0);
+const totTransp     = transportes.reduce((a,b)=>a+b,0);
+const totMat        = materiais.reduce((a,b)=>a+b,0);
+const totDesp       = despGerais.reduce((a,b)=>a+b,0);
+const totOut        = outros.map(v=>Math.max(v,0)).reduce((a,b)=>a+b,0);
+const totPes        = custoPes.reduce((a,b)=>a+b,0) - totBeneficios;
+
+new Chart(document.getElementById('c2a'),{
+  type:'doughnut',
+  data:{
+    labels:['Pessoal (base)','Benefícios','Transportes','Materiais','Desp. Gerais','Outros'],
+    datasets:[{
+      data:[totPes,totBeneficios,totTransp,totMat,totDesp,totOut],
+      backgroundColor:['#1f6fa8','#b08000','#5a3eaa','#3d2b00','#9b2020','#3a3f4b'],
+      borderColor:'#161b22',borderWidth:2,hoverOffset:8
+    }]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{
+      legend:{position:'right',labels:{font:{size:11}}},
+      tooltip:{callbacks:{label:c=>{
+        const tot=totPes+totBeneficios+totTransp+totMat+totDesp+totOut;
+        return ' '+c.label+': '+fmtBRL(c.raw)+' ('+((c.raw/tot)*100).toFixed(1)+'%)';
+      }}}
+    }
+  }
+});
+
+new Chart(document.getElementById('c2b'),{
+  type:'line',
+  data:{
+    labels:M5,
+    datasets:[
+      {label:'Custo Pessoal Total',data:custoPes,  borderColor:'#58a6ff',backgroundColor:'transparent',borderWidth:2,  pointRadius:4,tension:0.3},
+      {label:'Benefícios',         data:beneficios,borderColor:'#d29922',backgroundColor:'transparent',borderWidth:2,  pointRadius:4,tension:0.3},
+      {label:'Transportes',        data:transportes,borderColor:'#bc8cff',backgroundColor:'transparent',borderWidth:1.5,pointRadius:3,tension:0.3},
+      {label:'Desp. Gerais',       data:despGerais, borderColor:'#f85149',backgroundColor:'transparent',borderWidth:1.5,pointRadius:3,tension:0.3}
+    ]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'top',labels:{font:{size:11}}},tooltip:{callbacks:{label:c=>' '+c.dataset.label+': '+fmtBRL(c.raw)}}},
+    scales:{
+      y:{grid:{color:gridColor},ticks:{callback:v=>fmtBRL(v)}},
+      x:{grid:{display:false}}
+    }
+  }
+});
+
+const medBen  = beneficios.reduce((a,b)=>a+b,0)/5;
+const medDesp = despGerais.reduce((a,b)=>a+b,0)/5;
+new Chart(document.getElementById('c2c'),{
+  type:'bar',
+  data:{
+    labels:M5,
+    datasets:[
+      {label:'Benefícios (desvio vs. média)',data:beneficios.map(v=>+(v-medBen).toFixed(0)),
+       backgroundColor:beneficios.map(v=>(v-medBen)>0?'rgba(248,81,73,0.8)':'rgba(63,185,80,0.6)'),borderRadius:4},
+      {label:'Desp. Gerais (desvio vs. média)',data:despGerais.map(v=>+(v-medDesp).toFixed(0)),
+       backgroundColor:despGerais.map(v=>(v-medDesp)>0?'rgba(210,153,34,0.7)':'rgba(63,185,80,0.4)'),borderRadius:4}
+    ]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'top'},tooltip:{callbacks:{label:c=>' '+c.dataset.label+': '+(c.raw>0?'+':'')+fmtBRL(c.raw)}}},
+    scales:{
+      y:{grid:{color:gridColor},ticks:{callback:v=>(v>=0?'+':'')+fmtBRL(v)}},
+      x:{grid:{display:false}}
+    }
+  }
+});
+
+// ── TAB 3: PREDITIVA ─────────────────────────────────────────────
+function buildProj(reais,proj,cor){
+  return [
+    {label:'Realizado',data:[...reais,...Array(3).fill(null)],borderColor:cor,backgroundColor:'transparent',borderWidth:2.5,pointRadius:5,tension:0.3,spanGaps:false},
+    {label:'Projeção',data:[...Array(4).fill(null),reais[4],...proj],borderColor:cor,backgroundColor:'transparent',borderWidth:2,pointRadius:4,tension:0.3,borderDash:[6,4],spanGaps:false}
+  ];
+}
+
+new Chart(document.getElementById('c3a'),{
+  type:'line',
+  data:{
+    labels:M8,
+    datasets:[
+      ...buildProj(resultado,[200000,120000,-87000],'#f85149').map((d,i)=>({...d,label:i===0?'Realizado (todos)':undefined,hidden:i===1&&false})),
+      {label:'🔴 Alerta (proj.)',   data:[...Array(4).fill(null),323162,200000,120000,-87000], borderColor:'#f85149',backgroundColor:'transparent',borderWidth:2,pointRadius:4,tension:0.3,borderDash:[6,4]},
+      {label:'🟡 Base (proj.)',     data:[...Array(4).fill(null),323162,280000,245000,210000], borderColor:'#d29922',backgroundColor:'transparent',borderWidth:2,pointRadius:4,tension:0.3,borderDash:[6,4]},
+      {label:'🟢 Recuperação (proj.)',data:[...Array(4).fill(null),323162,420000,480000,540000],borderColor:'#3fb950',backgroundColor:'transparent',borderWidth:2,pointRadius:4,tension:0.3,borderDash:[6,4]},
+      {label:'Histórico',data:resultado,borderColor:'#58a6ff',backgroundColor:'transparent',borderWidth:2.5,pointRadius:5,tension:0.3}
+    ]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'top',labels:{font:{size:11},filter:l=>l.text!==undefined}},tooltip:{callbacks:{label:c=>c.raw!=null?' '+c.dataset.label+': '+fmtBRL(c.raw):null}}},
+    scales:{
+      y:{grid:{color:gridColor},ticks:{callback:v=>fmtBRL(v)}},
+      x:{grid:{display:false}}
+    }
+  }
+});
+
+new Chart(document.getElementById('c3b'),{
+  type:'line',
+  data:{
+    labels:M8,
+    datasets:[
+      {label:'Histórico',          data:margem,                                    borderColor:'#58a6ff',backgroundColor:'rgba(88,166,255,0.08)',borderWidth:2.5,pointRadius:5,fill:true,tension:0.3},
+      {label:'🔴 Alerta (proj.)',   data:[...Array(4).fill(null),8.4,5.2,3.1,-2.3],borderColor:'#f85149',backgroundColor:'transparent',borderWidth:2,pointRadius:4,tension:0.3,borderDash:[6,4]},
+      {label:'🟡 Base (proj.)',     data:[...Array(4).fill(null),8.4,7.3,6.5,5.5], borderColor:'#d29922',backgroundColor:'transparent',borderWidth:2,pointRadius:4,tension:0.3,borderDash:[6,4]},
+      {label:'🟢 Recuperação (proj.)',data:[...Array(4).fill(null),8.4,10.9,12.5,14.0],borderColor:'#3fb950',backgroundColor:'transparent',borderWidth:2,pointRadius:4,tension:0.3,borderDash:[6,4]}
+    ]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'top',labels:{font:{size:11}}},tooltip:{callbacks:{label:c=>c.raw!=null?' '+c.dataset.label+': '+c.raw+'%':null}}},
+    scales:{
+      y:{grid:{color:gridColor},ticks:{callback:v=>v+'%'}},
+      x:{grid:{display:false}}
+    }
+  }
+});
+
+// ── TAB 4: PRESCRITIVA ───────────────────────────────────────────
+new Chart(document.getElementById('c4a'),{
+  type:'bar',
+  indexAxis:'y',
+  data:{
+    labels:alavancas,
+    datasets:[{
+      label:'Impacto Estimado (R$/mês)',
+      data:impactos,
+      backgroundColor:['rgba(248,81,73,0.8)','rgba(210,153,34,0.8)','rgba(210,153,34,0.6)','rgba(139,148,158,0.5)'],
+      borderRadius:4
+    }]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' Impacto: +'+fmtBRL(c.raw)+'/mês'}}},
+    scales:{
+      x:{grid:{color:gridColor},ticks:{callback:v=>fmtBRL(v)}},
+      y:{grid:{display:false}}
+    }
+  }
+});
+
+// ── TAB SWITCHING ────────────────────────────────────────────────
+function showTab(id,btn){
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>
